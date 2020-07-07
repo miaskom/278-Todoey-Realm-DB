@@ -64,7 +64,7 @@ class TodoListViewController: UITableViewController {
        
     }
     
-   //MARK - tableView metody do	t. Datasources
+   //MARK: - tableView metody do	t. Datasources
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         //ile wierszy zarezerować w tabView -  tyle ile wiadomości chcemy wyświetlić
         return itemArray.count
@@ -105,7 +105,7 @@ class TodoListViewController: UITableViewController {
     
     
     
-  //MARK - tableview metody delegowane
+  //MARK: - tableview metody delegowane
     //metoda wołana przez iOS po zaznaczeniu/kliknięciu wybraneg wiersza tabeli
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         //błyśnij tylko podświetleniem zaznaczonego wiersza i wygaś go
@@ -132,7 +132,7 @@ class TodoListViewController: UITableViewController {
     }
     
     
-    //MARK - Dodaj nowe elem listy
+    //MARK: - Dodaj nowe elem listy
     @IBAction func addButtonPressed(_ sender: UIBarButtonItem) {
         
         var textField = UITextField() //zmienna pola tekstowego do której przypiszemy pole txt alertu
