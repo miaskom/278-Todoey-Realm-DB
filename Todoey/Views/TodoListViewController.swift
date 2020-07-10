@@ -7,7 +7,7 @@
 //
 
 import UIKit
-
+import CoreData
 
 
 class TodoListViewController: UITableViewController {
@@ -15,8 +15,10 @@ class TodoListViewController: UITableViewController {
     //var itemArray = ["Find Mike",  "drugi tekst", "jeszcze jeden"]
     var itemArray = [Item]()
     
-    //Data PERSISTENCE v1: UserDeafauts - zapamiętywanie danych obiektów/zmiennych w UserDefaults - plik w urządzeniu
-   // let defaults = UserDefaults.standard
+    
+    //Data PERSISTENCE v1:  UserDeafauts
+    // zapamiętywanie danych obiektów/zmiennych w UserDefaults - plik w urządzeniu
+//  let defaults = UserDefaults.standard
     
     //Data PERSISTENCE  v2: NSCoder
     //ścieżka - filemanger dla procesu (singleton) w home'ie bieżacego usera (.userDomainMask)
@@ -27,7 +29,13 @@ class TodoListViewController: UITableViewController {
     //
     //notomiast w folderze ./Documents/  metoda appending...() otworzy istnieący plik o podanej nazwie
     //lub przy próbie zapisu utworzy nowy plik jesli wcześniej nie istniał
-    let dataFilePath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("Items.plist")
+//  let dataFilePath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("Items.plist")
+    
+    
+    //Data PERSISTENCE v3: CoreData
+    //referencja do viewContext ze  zmiennej persistentContainer z AppDelegate:
+    let context_CoreData = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
+    
     
     
     override func viewDidLoad() {
@@ -53,16 +61,23 @@ class TodoListViewController: UITableViewController {
         newItem3.title = "FindMike33333"
         itemArray.append(newItem3)
         */
-        //Data PERSISTENCE - UserDefaults - zainicjuj wartości zmiennych z UserDefaults'ów
+        //Data PERSISTENCE v1 - UserDefaults - zainicjuj wartości zmiennych z UserDefaults'ów
  //       if let items = defaults.array(forKey: "ToDoList") as? [String]{
  //           itemArray = items
 //         }
         
-        loadItemsFromFile()
-
-        print(dataFilePath)
-       
+        //Data PERSISTENCE v2 - NSCoder
+ //       loadItemsFromFile()
+ //       print(dataFilePath)
+        
+        //ścieżka do bazy danych SQLite:
+         print(FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask).first)
+        //np. /Users/marcinmiasko/Library/Developer/CoreSimulator/Devices/9BA8808E-A203-4A9B-AFB5-030A5217B319/data/Containers/Data/Application/C9B309F4-7C18-4505-A71E-CD3915D40A87/Library/
+        //w podfolderze ./Application Support/ są pliki SQLite
+        loadItemsFromCoreData()
+        
     }
+    
     
    //MARK: - tableView metody do	t. Datasources
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
@@ -83,7 +98,7 @@ class TodoListViewController: UITableViewController {
     let cell = tableView.dequeueReusableCell(withIdentifier: "ToDoItemCell", for: indexPath)
     cell.textLabel?.text = self.itemArray[indexPath.row].title
     
-    print("cellForRowAt")
+   // print("cellForRowAt")
     
     //zaznacz checkboxa w klikniętej komórce
 /*    if  self.itemArray[indexPath.row].done == false {
@@ -124,11 +139,14 @@ class TodoListViewController: UITableViewController {
             self.itemArray[indexPath.row].done = false
         }*/
         
+        //self.itemArray[indexPath.row].setValue("nowa wartość", forKey: "title")
+        
         self.itemArray[indexPath.row].done = !self.itemArray[indexPath.row].done
         
         //tableView.reloadData()
         
-        self.saveItemsToFile()
+        //self.saveItemsToFile()
+        self.saveItemsToCoreData()
     }
     
     
@@ -156,8 +174,17 @@ class TodoListViewController: UITableViewController {
             //print(textField.text)
             if let txt  = textField.text {
                 
-                let newItem  = Item()
+                 
+                //let newItem  = Item()
+                
+                //obiekt Item na podst klasy encji Item utwrznej w CoreData,
+                //gdzie context to referencja do viewContext zmiennej persistentContainer z obiektu klasy AppDelegate.swift
+                //  czyli contextCoreData = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
+                //zatem tworzymy nowy obiekt/rekord w kontekście/kontenerze CoreData ale jeszcze bez fizycznego zapisu w bazie
+                let newItem = Item(context: self.context_CoreData)
+                
                 newItem.title = txt
+                newItem.done = false
                 self.itemArray.append(newItem)
 
                 
@@ -166,7 +193,8 @@ class TodoListViewController: UITableViewController {
                 //klucza tego użyemy potem do pobrania danych podczas ładowania aplikacji
   //              self.defaults.set(self.itemArray, forKey: "ToDoList")
                 
-                self.saveItemsToFile()
+               // self.saveItemsToFile()
+                self.saveItemsToCoreData()
             }
         }
         
@@ -177,8 +205,8 @@ class TodoListViewController: UITableViewController {
         present(alert, animated: true)
         
     }
-    
-    
+/*
+ //MARK: - zapis/odczyt danych z pliku w ramach NSCoder - DataPersistence v2
     func saveItemsToFile(){
         //Data Persistence  v2:  NSCoder -
         //PropertyListEncoder - tworzy obiekt potrafiący zakodować dowolny obiekt jako plist
@@ -210,8 +238,74 @@ class TodoListViewController: UITableViewController {
             }
         }
     } //loadItemsFromFile
+*/
     
+//MARK: - zapis/odczyt danych z bazy danych CoreData - DataPersistence v3
+    
+    func saveItemsToCoreData(){
+            do {
+                try context_CoreData.save()
+            } catch {
+            print("Bład zapisu kontekstu do bazy danych, \(error)")
+            }
+            
+            self.tableView.reloadData()
+            }
+    
+    
+    func loadItemsFromCoreData(with request : NSFetchRequest<Item> = Item.fetchRequest()){
+        do {
+            //pobierz do macierzy itemArray wszystkie Item'sy pobrane z naszego kontekstu CoreData
+            //używając w/w requestu dla Item'sów
+            itemArray = try context_CoreData.fetch(request)
+        } catch {
+            print("Błąd odczytu danych z bazy danych CoreData, \(error)")
+        }
+        tableView.reloadData()
+    } //loadItemsFromCoreData
     
 }
 
 
+//MARK: - obsługa SearchBar'a
+//rozszerzenie VC o protokół obsługi searchBar
+extension TodoListViewController:  UISearchBarDelegate {
+    //metoda wołana przez iOS po naciśnięciu przycisku szukaj na SearchBarze
+    func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
+        let request : NSFetchRequest<Item> = Item.fetchRequest()
+
+        if searchBar.text!.count > 0 {
+            request.predicate = NSPredicate(format: "title CONTAINS[cd] %@", searchBar.text!)
+        
+            request.sortDescriptors = [NSSortDescriptor(key: "title", ascending: true)]
+
+            loadItemsFromCoreData(with: request)
+        }
+        
+        //i wyłącz klawiaturę - czyli spraw, by searchBar nie był pierwszym responderem
+        //otrzymującym zdarzenia z iOS -  coś jakby "setFocus =false"
+        //zrezygnuj z bycia pierwszym responderem - ale trzeba to zrobić w GŁÓWNYM WĄTKU APLIKACJI
+        DispatchQueue.main.async {
+            //rezygnacja z bycia pierwszym responderem zamknie też klawiaturę
+            searchBar.resignFirstResponder()
+        }
+    }
+    
+    func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
+        //jeśli user kliknie X żeby wykasować wszystko w searchbar'ze
+        //czyli gdy tekst po zmianie będzie pusty
+        if searchBar.text?.count == 0 {
+            loadItemsFromCoreData()
+            
+            //i wyłącz klawiaturę - czyli spraw, by searchBar nie był pierwszym responderem
+            //otrzymującym zdarzenia z iOS -  coś jakby "setFocus =false"
+            //zrezygnuj z bycia pierwszym responderem - ale trzeba to zrobić w GŁÓWNYM WĄTKU APLIKACJI
+            DispatchQueue.main.async {
+                //rezygnacja z bycia pierwszym responderem zamknie też klawiaturę
+                searchBar.resignFirstResponder()
+            }
+        }
+    }
+
+
+}
