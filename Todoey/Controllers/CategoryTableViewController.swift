@@ -42,12 +42,26 @@ class CategoryTableViewController: UITableViewController {
     
    
 //MARK: - tableview metody delegowane
-    //metoda wołana przez iOS po zaznaczeniu/kliknięciu wybraneg wiersza tabeli
+    //metoda wołana przez iOS po kliknięciu wybranego wiersza tabeli
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        //błyśnij tylko podświetleniem zaznaczonego wiersza i wygaś go
-        tableView.deselectRow(at: indexPath, animated: true)
-      
-      //  self.saveItemsToCoreData()
+        //odpal segue - przejście do listy elementów - nastepneg viewContollera
+        performSegue(withIdentifier: "goToItems", sender: self)
+    }
+    
+    //metoda wołana przez iOS bezpośrednio przed przejściem/wykonaniem segue
+    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
+        if segue.identifier == "goToItems" {
+            //wskaźnik na docelowy VC - wiemy, że dla przejścia "goToList" będzie
+            //to klasa ToDoListViewController
+            let destinationVC = segue.destination as! TodoListViewController
+            
+            //ustal nr zaznaczonego/klikniętego wiersza VC i przekaż rekord klikniętej
+            //kategori do VC listy elementów, żeby wyświetlić tam tylko elementy z bieżącej kat.
+            if let indexPath = tableView.indexPathForSelectedRow {
+                //przekazuję do VC całą encję/rekord danej kategorii a nie tylko text klikniętej komórki
+                destinationVC.selectedCategory = categories[indexPath.row]
+            }
+        }
     }
     
     

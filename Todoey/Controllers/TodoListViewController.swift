@@ -15,6 +15,13 @@ class TodoListViewController: UITableViewController {
     //var itemArray = ["Find Mike",  "drugi tekst", "jeszcze jeden"]
     var itemArray = [Item]()
     
+    //wartość selectedCategory jest ustawiana wcześniej przez CategoryTableViewController
+    //i jest tu wstawiony rekord/encja wskazana na tamtej liście przez usera
+    var selectedCategory : Category? {
+        didSet{  //po ustawieniu wartości zmiennej wykonaj akcję!!!!
+            loadItemsFromCoreData()
+        }
+    }
     
     //Data PERSISTENCE v1:  UserDeafauts
     // zapamiętywanie danych obiektów/zmiennych w UserDefaults - plik w urządzeniu
@@ -74,7 +81,7 @@ class TodoListViewController: UITableViewController {
          print(FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask).first)
         //np. /Users/marcinmiasko/Library/Developer/CoreSimulator/Devices/9BA8808E-A203-4A9B-AFB5-030A5217B319/data/Containers/Data/Application/C9B309F4-7C18-4505-A71E-CD3915D40A87/Library/
         //w podfolderze ./Application Support/ są pliki SQLite
-        loadItemsFromCoreData()
+       // loadItemsFromCoreData() ---usuwam tu bo loadData jest ładowane teraz na podst selectedCategory
         
     }
     
@@ -185,6 +192,7 @@ class TodoListViewController: UITableViewController {
                 
                 newItem.title = txt
                 newItem.done = false
+                newItem.parentCategory = self.selectedCategory
                 self.itemArray.append(newItem)
 
                 
@@ -253,7 +261,18 @@ class TodoListViewController: UITableViewController {
             }
     
     
-    func loadItemsFromCoreData(with request : NSFetchRequest<Item> = Item.fetchRequest()){
+    func loadItemsFromCoreData(with request : NSFetchRequest<Item> = Item.fetchRequest(),
+                                   predicate: NSPredicate? = nil){
+        let categoryPredicate = NSPredicate(format: "parentCategory.name MATCHES %@", selectedCategory!.name!)
+        
+        if let additionalPredicate = predicate {
+            //złożony predicate z 2 warunków/predictów i AND'a
+            let zlozonyPredicate = NSCompoundPredicate(andPredicateWithSubpredicates: [categoryPredicate, additionalPredicate])
+            request.predicate = zlozonyPredicate
+        } else {
+            request.predicate = categoryPredicate
+        }
+        
         do {
             //pobierz do macierzy itemArray wszystkie Item'sy pobrane z naszego kontekstu CoreData
             //używając w/w requestu dla Item'sów
