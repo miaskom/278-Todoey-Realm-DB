@@ -7,26 +7,35 @@
 //
 
 import UIKit
-import CoreData
+import RealmSwift
 
 class CategoryTableViewController: UITableViewController {
-    var categories = [Category]()
+    //  var categories = [Category]()
+    //dane odczytywane z bazy przez realm.objects() zwracają listę Results<Category>
+    //a nie Array[Category] wiec nie można tak wprost podstawić tego wyniku to zmiennej 'categories'
+    //dlatego zmieniamy typ z [Category]() na Results<Category> która jest autoupdeowalna
+    //czyli automatycznie aktualizowana w oparciu o zawartość bazy danych
+    //Dodaję opcjonalność ? bo lista może być pusta
+    var categories: Results<Category>?
     
-    //Data PERSISTENCE v3: CoreData - referencja do viewContext ze  zmiennej persistentContainer z AppDelegate:
-    let context_CoreData = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
+    //zainicjuj połączenie do bazy Realm (używając ! nie potrzeba do-catch
+    let realm = try! Realm()
     
     
     override func viewDidLoad() {
         super.viewDidLoad()
      
-        loadItemsFromCoreData()
+        //pokaż lokalizację bazy danych Realm
+        print(Realm.Configuration.defaultConfiguration.fileURL)
+        
+        loadItemsFromRealmDB()
     }
 
 
 //MARK: - tableView metody do    t. Datasources
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         //ile wierszy zarezerować w tabView -  tyle ile wiadomości chcemy wyświetlić
-        return categories.count
+        return categories?.count ?? 1
     }
 
   
@@ -35,7 +44,7 @@ class CategoryTableViewController: UITableViewController {
     //w tym celu powinniśmy wykorzytać prototypowy wiersz o zdefiniowanym w storyboadrzie
     //identyfikatorze, którego nazwę "CategoryItemCell" wpisaliśmy we właściwościach komórkiw
     let cell = tableView.dequeueReusableCell(withIdentifier: "CategoryItemCell", for: indexPath)
-    cell.textLabel?.text = self.categories[indexPath.row].name
+    cell.textLabel?.text = self.categories?[indexPath.row].name ?? "Nie wybrano jeszcze żadnej kategorii"
     return cell
   }
     
@@ -59,7 +68,7 @@ class CategoryTableViewController: UITableViewController {
             //kategori do VC listy elementów, żeby wyświetlić tam tylko elementy z bieżącej kat.
             if let indexPath = tableView.indexPathForSelectedRow {
                 //przekazuję do VC całą encję/rekord danej kategorii a nie tylko text klikniętej komórki
-                destinationVC.selectedCategory = categories[indexPath.row]
+                destinationVC.selectedCategory = categories?[indexPath.row] 
             }
         }
     }
@@ -83,12 +92,17 @@ class CategoryTableViewController: UITableViewController {
         let action = UIAlertAction(title: "Dodaj nowy", style: .default) { (akcja) in
             //co ma się zadziać gdy user kliknie na przycisk dodania "Dodaj nowy" na naszym alercie
             if let txt  = textField.text {
-                let newCategory = Category(context: self.context_CoreData)
-                
+                //utworzenie noweg obiektu/rekordu Categories
+                let newCategory = Category()
                 newCategory.name = txt
-                self.categories.append(newCategory)
-
-                self.saveItemsToCoreData()
+                
+                //self.categories.append(newCategory)
+                //po zmianie typu 'categories' z [Category]() na Results<Category>,
+                //która jest autoupdateowalna nie potrzeba już robić append
+                //jak było to w zwykłaej macierzy - tu wystarczy wykomnać zapis
+                //do bazy danych i zmienna 'categories' od razu sama zaczyta dane z bazy
+                
+                self.saveItemsToRealmDB(category: newCategory)
             }
         }
         
@@ -100,26 +114,29 @@ class CategoryTableViewController: UITableViewController {
         
     }
     
-//MARK: - zapis/odczyt danych z bazy danych CoreData - DataPersistence v3
-    
-    func saveItemsToCoreData(){
-            do {
-                try context_CoreData.save()
-            } catch {
-            print("Bład zapisu kontekstu do bazy danych, \(error)")
+//MARK: - zapis/odczyt danych z bazy danych Realm
+    func saveItemsToRealmDB(category: Category){
+        do { //zapisz w bazie Realm
+            try realm.write() {
+                realm.add(category)
             }
-            
-            self.tableView.reloadData()
-            }
-    
-    
-    func loadItemsFromCoreData(with request : NSFetchRequest<Category> = Category.fetchRequest()){
-        do {
-            categories = try context_CoreData.fetch(request)
         } catch {
-            print("Błąd odczytu danych z bazy danych CoreData, \(error)")
+        print("Bład zapisu kontekstu do bazy danych, \(error)")
         }
+        
+        self.tableView.reloadData()
+    }
+    
+    
+    func loadItemsFromRealmDB(){
+        //pobierz wszystkie obiekty z bazy Realm typu 'Category'
+        //Category to tylko klasa a nie typ aby uzyskać Object.Type klasy trzeba użyć .self;
+        categories = realm.objects(Category.self)
+        //powyższe realm.objects() zwraca listę Results<Category> a nie Array[Category] wiec
+        //nie można tak wprost podstawić tego wyniku to zmiennej 'categories'
+        //dlatego zminieliśmy typ z [Category]() na Results<Category>
+        
         tableView.reloadData()
-    } //loadItemsFromCoreData
+    } //loadItemsFromRealmDB
     
 }
