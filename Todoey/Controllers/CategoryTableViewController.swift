@@ -9,6 +9,9 @@
 import UIKit
 import RealmSwift
 
+//przesuwalna komórka TVC - przesuń w praw aby pojawiło się menu Delete, itp.
+import SwipeCellKit
+
 class CategoryTableViewController: UITableViewController {
     //  var categories = [Category]()
     //dane odczytywane z bazy przez realm.objects() zwracają listę Results<Category>
@@ -29,6 +32,8 @@ class CategoryTableViewController: UITableViewController {
         print(Realm.Configuration.defaultConfiguration.fileURL)
         
         loadItemsFromRealmDB()
+        
+        tableView.rowHeight = 80
     }
 
 
@@ -38,17 +43,20 @@ class CategoryTableViewController: UITableViewController {
         return categories?.count ?? 1
     }
 
-  
+    
   override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
     //funkcja powinna zwróicić obiekt klasy UITableViewCell dla podanego indexPath (numeru wiersza)
     //w tym celu powinniśmy wykorzytać prototypowy wiersz o zdefiniowanym w storyboadrzie
     //identyfikatorze, którego nazwę "CategoryItemCell" wpisaliśmy we właściwościach komórkiw
-    let cell = tableView.dequeueReusableCell(withIdentifier: "CategoryItemCell", for: indexPath)
+    let cell = tableView.dequeueReusableCell(withIdentifier: "CategoryItemCell", for: indexPath) as! SwipeTableViewCell
     cell.textLabel?.text = self.categories?[indexPath.row].name ?? "Nie wybrano jeszcze żadnej kategorii"
+    
+    cell.delegate = self
     return cell
   }
     
     
+
    
 //MARK: - tableview metody delegowane
     //metoda wołana przez iOS po kliknięciu wybranego wiersza tabeli
@@ -139,4 +147,39 @@ class CategoryTableViewController: UITableViewController {
         tableView.reloadData()
     } //loadItemsFromRealmDB
     
+}
+
+//MARK: - obsługa wymagana przez protokół SwipeTableViewCellDelegate
+//obsługa przesuwalnej komórki TVC - przesuń w praw aby pojawiło się menu Delete, itp.
+extension CategoryTableViewController: SwipeTableViewCellDelegate {
+    func tableView(_ tableView: UITableView, editActionsForRowAt indexPath: IndexPath, for orientation: SwipeActionsOrientation) -> [SwipeAction]? {
+    guard orientation == .right else { return nil }
+        
+    let deleteAction = SwipeAction(style: .destructive, title: "Delete") { action, indexPath in
+        //co ma się stać gdy user przesunie komórkę w prawo
+        //print("delete item .....")
+        if let categoryToDelete = self.categories?[indexPath.row] {
+            do {
+                try self.realm.write{
+                    self.realm.delete(categoryToDelete)
+                }
+            } catch {
+                print("Błąd usuwania kategorii z bazy, \(error)")
+            }
+            //self.tableView.reloadData()
+        }//if let...
+    }
+    //do Assetów dodać ikonkę usuwania i poniżej wpisać jej nazwę
+    deleteAction.image = UIImage(named: "delete-icon")
+    return [deleteAction]
+  }
+
+    
+    func tableView(_ tableView: UITableView, editActionsOptionsForRowAt indexPath: IndexPath, for orientation: SwipeActionsOrientation) -> SwipeOptions {
+    var options = SwipeOptions()
+    options.expansionStyle = .destructive
+    //options.transitionStyle = .border
+    return options
+}
+
 }
