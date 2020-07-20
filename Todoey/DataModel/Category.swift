@@ -14,6 +14,7 @@ class Category: Object{
     //dynamic oznacza, że Realm może dynamicznie aktualizować zmiany w bazie
     //gdy zmieni się warość zmiennej (@objc - bo to własciwość z Objectove-C)
     @objc dynamic var name: String = ""
+    @objc dynamic var colour: String? = ""
     //lista Itemsów (inicjalizacja pustej listy)
     let items = List<Item>()
 }

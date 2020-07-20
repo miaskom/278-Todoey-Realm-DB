@@ -108,7 +108,6 @@
 		FD4142A724B372A6001E40B6 /* Views */ = {
 			isa = PBXGroup;
 			children = (
-				EB2BE504239524DC00FB933B /* LaunchScreen.storyboard */,
 				EB2BE4FF239524DB00FB933B /* Main.storyboard */,
 			);
 			path = Views;
@@ -117,6 +116,7 @@
 		FD4142A824B372C7001E40B6 /* SupportingFiles */ = {
 			isa = PBXGroup;
 			children = (
+				EB2BE504239524DC00FB933B /* LaunchScreen.storyboard */,
 				EB2BE502239524DC00FB933B /* Assets.xcassets */,
 			);
 			path = SupportingFiles;

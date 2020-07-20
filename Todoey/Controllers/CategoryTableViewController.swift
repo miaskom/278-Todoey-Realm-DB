@@ -8,6 +8,7 @@
 
 import UIKit
 import RealmSwift
+import ChameleonFramework
 
 
 
@@ -35,6 +36,10 @@ class CategoryTableViewController: SwipeTableViewController {
         tableView.rowHeight = 80
     }
 
+    
+    override func viewWillAppear(_ animated: Bool) {
+        navigationController?.navigationBar.barTintColor = UIColor.systemBlue
+    }
 
 //MARK: - tableView metody do    t. Datasources
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
@@ -48,6 +53,9 @@ class CategoryTableViewController: SwipeTableViewController {
     let cell = super.tableView(tableView, cellForRowAt: indexPath)
     //i dodatkowo ustaw tekst komórki
     cell.textLabel?.text = self.categories?[indexPath.row].name ?? "Nie wybrano jeszcze żadnej kategorii"
+    cell.backgroundColor = UIColor(hexString: (self.categories?[indexPath.row].colour)!)
+    cell.textLabel?.textColor = ContrastColorOf(cell.backgroundColor!, returnFlat: true)
+               
 
     return cell
   }
@@ -58,8 +66,11 @@ class CategoryTableViewController: SwipeTableViewController {
 //MARK: - tableview metody delegowane
     //metoda wołana przez iOS po kliknięciu wybranego wiersza tabeli
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        print("Wyubrany wiersz \(indexPath.row)")
         //odpal segue - przejście do listy elementów - nastepneg viewContollera
         performSegue(withIdentifier: "goToItems", sender: self)
+        
+        tableView.deselectRow(at: indexPath, animated: true)
     }
     
     //metoda wołana przez iOS bezpośrednio przed przejściem/wykonaniem segue
@@ -106,6 +117,9 @@ class CategoryTableViewController: SwipeTableViewController {
                 //która jest autoupdateowalna nie potrzeba już robić append
                 //jak było to w zwykłaej macierzy - tu wystarczy wykomnać zapis
                 //do bazy danych i zmienna 'categories' od razu sama zaczyta dane z bazy
+                
+                //wartość HEX koloru z biblioteki Chameleon
+                newCategory.colour = UIColor.randomFlat().hexValue()
                 
                 self.saveItemsToRealmDB(category: newCategory)
             }

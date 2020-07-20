@@ -8,10 +8,13 @@
 
 import UIKit
 import RealmSwift
+import ChameleonFramework
 
 
-class TodoListViewController: UITableViewController {
+class TodoListViewController: SwipeTableViewController {
 
+    @IBOutlet weak var searchBar: UISearchBar!
+    
     var toDoItems: Results<Item>?
     
     //zainicjuj połączenie do bazy Realm (używając ! nie potrzeba do-catch
@@ -29,10 +32,23 @@ class TodoListViewController: UITableViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
-       
-        
     }
     
+    override func viewWillAppear(_ animated: Bool) {
+        
+        title  = selectedCategory!.name
+        
+        if let kolorHex = selectedCategory?.colour {
+            if let kolor = UIColor(hexString: kolorHex) {
+                //kolor całego NavBara
+                navigationController?.navigationBar.barTintColor = kolor
+                //kolor przycisku Wstecz
+                navigationController?.navigationBar.tintColor = ContrastColorOf(kolor, returnFlat: true)
+                
+                searchBar.barTintColor = kolor
+                }
+            }
+    }
     
    //MARK: - tableView metody do	t. Datasources
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
@@ -50,11 +66,22 @@ class TodoListViewController: UITableViewController {
     //identyfikatorze, którego nazwę "ToDoItemCell" wpisaliśmy we właściwościach komórki
     //Możemy mieć w storyboardzie więcej takich prototypowych komórek o różnych id i różnych ustawieniach
     //więc tutaj musimy zwrócić tą, którą chcemy by posłużyła się jako wzorcema nasza tableView
-    let cell = tableView.dequeueReusableCell(withIdentifier: "ToDoItemCell", for: indexPath)
+    let cell = super.tableView(tableView, cellForRowAt: indexPath)
     
     if  let item = self.toDoItems?[indexPath.row] {
         cell.textLabel?.text = item.title
         cell.accessoryType = item.done ? .checkmark : .none
+        
+        //ustaw kolor komórki korzystając z metod biblioteki Chamelon
+        //każdy kolejny wiersz przyciemniony o %
+        if let kolor =  UIColor(hexString: selectedCategory!.colour!)?.darken(byPercentage:
+                                        //ile % przyciemnić
+            CGFloat( CGFloat(indexPath.row) / CGFloat(toDoItems!.count) )){
+            cell.backgroundColor = kolor
+            cell.textLabel?.textColor = ContrastColorOf(kolor, returnFlat: true)
+            
+        }
+        
     } else {
         cell.textLabel?.text = "Brak elementów w kategorii!"
     }
@@ -73,10 +100,6 @@ class TodoListViewController: UITableViewController {
         if let item = self.toDoItems?[indexPath.row] {
             do{
                 try realm.write{
-                    //DELETE REKORDU
-                    //realm.delete(item)
-                    
-                    //UPDATE REKORDU:
                     item.done = !item.done
                 }
             } catch {
@@ -143,7 +166,7 @@ class TodoListViewController: UITableViewController {
     }
 
     
-//MARK: - odczyt danych z bazy danych CoreData - DataPersistence v3
+//MARK: - odczyt danych z bazy danych
 
     func loadItemsFromRealmDb(){
         //załaduj liste elementów z przekazanej selected Category z listy 'items' i posortuj
@@ -151,7 +174,22 @@ class TodoListViewController: UITableViewController {
         tableView.reloadData()
     } //loadItemsFromRealmDb(
     
+    
+    //MARK: - DELETE z bazy danych
+    //nadpisana metoda updateModel z klasy bazowej SwipeTVC
+    override func updateModel(at indexPath: IndexPath) {
+        if let itemToDelete = self.toDoItems?[indexPath.row] {
+            do {
+                try self.realm.write{
+                    self.realm.delete(itemToDelete)
+                }
+            } catch {
+                print("Błąd usuwania elementu z bazy, \(error)")
+            }
+        }//if let...
+    }
 }
+
 
 
 //MARK: - obsługa SearchBar'a
